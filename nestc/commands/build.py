@@ -38,9 +38,17 @@ def execute_build()->bool:
 
     c_files.add(bootstrap_path)
     c_files.add("src/mongoose.c")
+    c_files.add("src/frozen.c")
 
     # GCC necesita saber dónde están los headers generados (-Ibuild)
-    compile_cmd = ["gcc"] + list(c_files) + ["-o", "build/app", "-Isrc", "-Ibuild"]
+    compile_cmd = [
+        "gcc",
+        "-O2", # Optimización
+        *list(c_files),
+        "-o", "build/app",
+        "-Isrc",   # Para que encuentre frozen.h y mongoose.h
+        "-Ibuild"  # Para que encuentre services_discovery.gen.h
+    ]
     
     result = subprocess.run(compile_cmd)
 

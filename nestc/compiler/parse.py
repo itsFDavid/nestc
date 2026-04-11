@@ -49,7 +49,7 @@ def analyze_project(src_dir):
     # para que la lista esté completa antes de intentar hacer conexiones.
     for root, _, files in os.walk(src_dir):
         for file in files:
-            if file.endswith(".c") and "mongoose" not in file:
+            if file.endswith(".c") and "mongoose" not in file and "frozen" not in file:
                 path = os.path.join(root, file)
                 with open(path, "r") as f:
                     code = f.read()
@@ -61,7 +61,7 @@ def analyze_project(src_dir):
     # --- PASADA 2: Construcción del AST y Enlaces ---
     for root, _, files in os.walk(src_dir):
         for file in files:
-            if file.endswith(".c") and "mongoose" not in file:
+            if file.endswith(".c") and "mongoose" not in file and "frozen" not in file:
                 path = os.path.join(root, file)
                 try:
                     with open(path, "r") as f:
