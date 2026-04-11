@@ -6,13 +6,14 @@ import sys
 from nestc.compiler.parse import analyze_project
 from nestc.compiler.codegen.bootstrap import generate_bootstrap_c
 from nestc.utils.colors import Colors, NEST_C_LOGO
+from nestc.utils.downloader import ensure_dependencies
 
 def execute_build()->bool:
     click.echo(NEST_C_LOGO)
     click.echo(f"{Colors.BOLD}Iniciando build modular del proyecto...{Colors.END}")
 
     src_dir = "src"
-    ensure_mongoose_exists(src_dir)
+    ensure_dependencies(src_dir)
     build_dir = "build"
     output_bin = os.path.join(build_dir, "app")
 
@@ -50,21 +51,3 @@ def execute_build()->bool:
     else:
         click.echo(f"\n{Colors.RED}Falló la compilación de los módulos.{Colors.END}")
         return False
-
-
-def ensure_mongoose_exists(src_dir):
-    """Descarga mongoose.c y mongoose.h si no están presentes."""
-    files = {
-        "mongoose.c": "https://raw.githubusercontent.com/cesanta/mongoose/master/mongoose.c",
-        "mongoose.h": "https://raw.githubusercontent.com/cesanta/mongoose/master/mongoose.h"
-    }
-    
-    for filename, url in files.items():
-        path = os.path.join(src_dir, filename)
-        if not os.path.exists(path):
-            click.echo(f"  {Colors.CYAN}↓{Colors.END} Descargando {filename} para el servidor HTTP...")
-            try:
-                urllib.request.urlretrieve(url, path)
-            except Exception as e:
-                click.echo(f"{Colors.RED}Error descargando dependencias: {e}{Colors.END}")
-                sys.exit(1)

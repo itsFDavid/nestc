@@ -13,73 +13,88 @@ CRUD_METHODS = {
 def create_resource(name):
     click.echo("Nest-C resource generator")
     transport = click.prompt("What transport layer do you use?", default="REST API")
-    
-    # Detectamos si es un servicio puro (Shared Module / Microservice)
     is_microservice = transport.strip().lower() == "microservice"
     
     if not is_microservice:
         crud = click.confirm("Would you like to generate CRUD entry points?", default=True)
     else:
-        crud = False # Los microservicios puros no tienen rutas CRUD expuestas
-        click.echo(f"  {Colors.CYAN}ℹ Generando Shared Module (Sin Controlador){Colors.END}")
+        crud = False
 
     res_dir = os.path.join("src", name)
     os.makedirs(res_dir, exist_ok=True)
     cap = name.capitalize()
 
-    # 1. GENERAR SERVICE (Siempre se genera)
+    # 1. GENERAR SERVICE
     with open(os.path.join(res_dir, f"{name}.service.c"), "w") as f:
-        f.write("#include <string.h>\n")
+        f.write("#include <stdio.h>\n#include <string.h>\n")
         f.write("#ifndef NESTC_JSON\n#define NESTC_JSON(str) strdup(str)\n#endif\n\n")
-        f.write(f"// @Service: {cap}Service\ntypedef struct {{\n")
         
+        f.write(f"// @Service: {cap}Service\ntypedef struct {{\n")
         if crud:
-            f.write("    char* (*find_all)();\n    char* (*find_one)(const char* id);\n")
-            f.write("    char* (*create)();\n    char* (*update)(const char* id);\n")
+            f.write("    char* (*find_all)();\n")
+            f.write("    char* (*find_one)(const char* id);\n")
+            f.write("    char* (*create)(const char* body);\n")
+            f.write("    char* (*update)(const char* id, const char* body);\n")
             f.write("    char* (*remove)(const char* id);\n")
         else:
             f.write("    char* (*do_something)();\n")
         f.write(f"}} {cap}Service;\n\n")
 
         if crud:
-            f.write(f'char* {name}_logic_all() {{ return NESTC_JSON("{{\\\"res\\\": \\\"{name}\\\"}}"); }}\n')
-            f.write(f'char* {name}_logic_one(const char* id) {{ return NESTC_JSON("{{\\\"id\\\": \\\"%s\\\"}}"); }} // Implementar sprintf\n')
-            f.write(f'char* {name}_logic_create() {{ return NESTC_JSON("{{\\\"created\\\": \\\"{name}\\\"}}"); }}\n')
-            f.write(f'char* {name}_logic_update(const char* id) {{ return NESTC_JSON("{{\\\"updated\\\": \\\"%s\\\"}}"); }}\n')
-            f.write(f'char* {name}_logic_remove(const char* id) {{ return NESTC_JSON("{{\\\"removed\\\": \\\"%s\\\"}}"); }}\n')
+            f.write(f'char* {name}_logic_all() {{\n    return NESTC_JSON("{{\\\"res\\\": \\\"{name}\\\"}}");\n}}\n\n')
+            
+            f.write(f'char* {name}_logic_one(const char* id) {{\n')
+            f.write(f'    char buffer[256];\n')
+            f.write(f'    snprintf(buffer, sizeof(buffer), "{{\\\"id\\\": \\\"%s\\\"}}", id);\n')
+            f.write(f'    return NESTC_JSON(buffer);\n}}\n\n')
+            
+            f.write(f'char* {name}_logic_create(const char* body) {{\n')
+            f.write(f'    char buffer[1024];\n')
+            f.write(f'    snprintf(buffer, sizeof(buffer), "{{\\\"action\\\": \\\"created\\\", \\\"payload\\\": %s}}", body[0] ? body : "{{\\"empty\\\":true}}");\n')
+            f.write(f'    return NESTC_JSON(buffer);\n}}\n\n')
+            
+            f.write(f'char* {name}_logic_update(const char* id, const char* body) {{\n')
+            f.write(f'    char buffer[1024];\n')
+            f.write(f'    snprintf(buffer, sizeof(buffer), "{{\\\"action\\\": \\\"updated\\\", \\\"id\\\": \\\"%s\\\", \\\"payload\\\": %s}}", id, body[0] ? body : "{{\\"empty\\\":true}}");\n')
+            f.write(f'    return NESTC_JSON(buffer);\n}}\n\n')
+            
+            f.write(f'char* {name}_logic_remove(const char* id) {{\n')
+            f.write(f'    char buffer[256];\n')
+            f.write(f'    snprintf(buffer, sizeof(buffer), "{{\\\"action\\\": \\\"removed\\\", \\\"id\\\": \\\"%s\\\"}}", id);\n')
+            f.write(f'    return NESTC_JSON(buffer);\n}}\n')
         else:
-            f.write(f'char* {name}_logic_something() {{ return NESTC_JSON("{{\\\"action\\\": \\\"{name} service executed\\\"}}"); }}\n')
+            f.write(f'char* {name}_logic_something() {{\n    return NESTC_JSON("{{\\\"action\\\": \\\"{name} service executed\\\"}}");\n}}\n')
 
-    # 2. GENERAR CONTROLLER (Solo si NO es microservicio)
+    # 2. GENERAR CONTROLLER
     if not is_microservice:
         with open(os.path.join(res_dir, f"{name}.controller.c"), "w") as f:
             f.write(f"// Controlador para {name}\n")
-            f.write(f'#include "{name}.service.c" // Cadena de inclusion\n\n')
+            f.write(f'#include "{name}.service.c"\n\n')
             
             if crud:
                 for method, (http, route) in CRUD_METHODS.items():
                     parsed_route = route.replace("{name}", name)
                     f.write(f"// @{http}: {parsed_route}\n// @Inject: {cap}Service\n")
-                    if "/:id" in parsed_route:
-                        f.write(f"char* {name}_{method}_handler({cap}Service* s, const char* id) {{\n")
-                        f.write(f"    return s->{method}(id);\n}}\n\n")
-                    else:
-                        f.write(f"char* {name}_{method}_handler({cap}Service* s) {{\n")
-                        f.write(f"    return s->{method}();\n}}\n\n")
+                    
+                    args = [f"{cap}Service* s"]
+                    if "/:id" in parsed_route: args.append("const char* id")
+                    if http in ["POST", "PUT", "PATCH"]: args.append("const char* body")
+                    
+                    call_args = []
+                    if "/:id" in parsed_route: call_args.append("id")
+                    if http in ["POST", "PUT", "PATCH"]: call_args.append("body")
+                    
+                    f.write(f"char* {name}_{method}_handler({', '.join(args)}) {{\n")
+                    f.write(f"    return s->{method}({', '.join(call_args)});\n}}\n\n")
             else:
                 f.write(f"// @GET: /{name}\n// @Inject: {cap}Service\n")
                 f.write(f"char* {name}_find_all_handler({cap}Service* s) {{\n")
                 f.write(f"    return s->do_something();\n}}\n")
 
-    # 3. GENERAR MÓDULO (El orquestador de la inclusión)
+    # 3. GENERAR MÓDULO
     with open(os.path.join(res_dir, f"{name}.module.c"), "w") as f:
         f.write(f'#include <stdio.h>\n#include <stdlib.h>\n')
-        
-        # Lógica de la cadena de inclusión
-        if is_microservice:
-            f.write(f'#include "{name}.service.c" // Directo al servicio\n\n')
-        else:
-            f.write(f'#include "{name}.controller.c" // Controller ya incluye al Service\n\n')
+        f.write(f'#include "{name}.service.c"\n\n' if is_microservice else f'#include "{name}.controller.c"\n\n')
 
         f.write(f"// @Init: {cap}Service\nvoid* init_{name}_service() {{\n")
         f.write(f"    {cap}Service* s = malloc(sizeof({cap}Service));\n")
@@ -94,12 +109,9 @@ def create_resource(name):
             f.write(f"    s->do_something = {name}_logic_something;\n")
             
         f.write("    return s;\n}\n\n")
-        
-        f.write(f"// @Destroy: {cap}Service\nvoid destroy_{name}_service(void* s) {{\n")
-        f.write("    if (s) free(s);\n}\n\n")
+        f.write(f"// @Destroy: {cap}Service\nvoid destroy_{name}_service(void* s) {{\n    if (s) free(s);\n}}\n\n")
         f.write(f"// @Module: {cap}Module\nvoid {name}_module_init() {{}}\n")
 
     click.echo(f"\n{Colors.GREEN}CREATE{Colors.END} {cap}Service ({name}.service.c)")
-    if not is_microservice:
-        click.echo(f"{Colors.GREEN}CREATE{Colors.END} {cap}Controller ({name}.controller.c)")
+    if not is_microservice: click.echo(f"{Colors.GREEN}CREATE{Colors.END} {cap}Controller ({name}.controller.c)")
     click.echo(f"{Colors.GREEN}CREATE{Colors.END} {cap}Module ({name}.module.c)")

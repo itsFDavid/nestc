@@ -3,6 +3,7 @@ from nestc.commands.build import execute_build
 from nestc.commands.new import create_project_structure
 from nestc.commands.run import execute_run
 from nestc.commands.generate import create_resource
+from nestc.utils.fs import assert_nestc_project
 
 @click.group()
 def main():
@@ -12,6 +13,7 @@ def main():
 @main.command()
 def build():
   """Transpila y genera el binario de C."""
+  assert_nestc_project()
   execute_build()
 
 @main.command()
@@ -23,6 +25,7 @@ def new(name):
 @main.command()
 def start():
     """Build y ejecución del proyecto."""
+    assert_nestc_project()
     execute_run()
 
 # Grupo para generar cosas (nestc generate ...)
@@ -35,6 +38,7 @@ def generate():
 @click.argument('name')
 def resource(name):
     """Genera un nuevo recurso (Controller + Service)."""
+    assert_nestc_project()
     create_resource(name)
 
 @main.command(name='g')
@@ -43,6 +47,7 @@ def resource(name):
 @click.pass_context
 def generate_alias(ctx, type, name):
     """Alias para generate."""
+    assert_nestc_project()
     if type == 'resource' or type == 'res':
         ctx.invoke(resource, name=name)
     else:
