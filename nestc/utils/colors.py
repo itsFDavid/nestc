@@ -17,5 +17,5 @@ NEST_C_LOGO = rf"""{Colors.RED}{Colors.BOLD}
  |  \| |/ _ \/ __| __| | |    
  | |\  |  __/\__ \ |_  | |___ 
  |_| \_|\___||___/\__|  \____|
-{Colors.END}{Colors.CYAN}   NestJS-style Framework for C{Colors.END}
+{Colors.END}{Colors.CYAN}   Backend Framework for C{Colors.END}
 """
