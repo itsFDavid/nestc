@@ -3,7 +3,7 @@ import urllib.request
 import click
 from nestc.utils.colors import Colors
 
-from nestc.utils.templates.core_api import NEST_CORE_H_CONTENT, ENV_UTILS_CONTENT, JSON_UTILS_CONTENT
+from nestc.utils.templates.core_api import NEST_CORE_H_CONTENT, ENV_UTILS_CONTENT, JSON_UTILS_CONTENT, NC_JSON_CONTENT
 
 
 MONGOOSE_VERSION = "7.21"
@@ -23,6 +23,11 @@ def ensure_dependencies():
     core_dir = "@nestcore"
     os.makedirs(core_dir, exist_ok=True)
 
+    # 0. Escribir el header para manejo de JSON (nc_json.h)
+    with open(os.path.join(core_dir, "nc_json.h"), "w") as f:
+        f.write(NC_JSON_CONTENT)
+        click.echo(f"  {Colors.GREEN}✓{Colors.END} nc_json.h generado en {core_dir}/")
+    
     # 1: Escribir el header principal de Nest-C (nest_core.h)
     core_header_path = os.path.join(core_dir, "nest_core.h")
     if not os.path.exists(core_header_path):

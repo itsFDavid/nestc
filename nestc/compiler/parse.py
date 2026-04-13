@@ -50,7 +50,8 @@ class DecoratorVisitor(c_ast.NodeVisitor):
                 "route": metadata["route"],
                 "method": metadata["method"] or "GET",
                 "function": func_name,
-                "inject": metadata["inject"]
+                "inject": metadata["inject"],
+                "dto": metadata["body"]
             })
 
         if metadata["init"]:
@@ -67,7 +68,7 @@ class DecoratorVisitor(c_ast.NodeVisitor):
 
 @timer
 def analyze_project(src_dir):
-    all_data = {"controllers": [], "services": [], "modules": []}
+    all_data = {"controllers": [], "services": [], "modules": [], "dtos": []}
     parser = c_parser.CParser()
 
     # --- PASADA 1: Descubrimiento Global ---
@@ -77,12 +78,20 @@ def analyze_project(src_dir):
                 path = os.path.join(root, file)
                 with open(path, "r") as f:
                     code = f.read()
+                
+                # Buscar servicios globalmente para luego inyectar tipos falsos en la PASADA 2
                 services_in_file = re.findall(r"@Service:\s*(\S+)", code)
                 for s in services_in_file:
                     if not any(x["name"] == s for x in all_data["services"]):
                         all_data["services"].append(
                             {"name": s, "init_func": None, "destroy_func": None}
                         )
+                
+                # Buscar DTOs globalmente para luego generar validadores
+                dtos_in_file = re.findall(r"@DTO:\s*(\w+)", code)
+                for d in dtos_in_file:
+                    if d not in all_data["dtos"]:
+                        all_data["dtos"].append(d)
 
     # --- PASADA 2: Construcción del AST y Enlaces ---
     for root, _, files in os.walk(src_dir):
@@ -104,7 +113,8 @@ def analyze_project(src_dir):
                     )
 
                     # Inyectar los tipos falsos dinámicamente
-                    custom_types = [s["name"] for s in all_data["services"]]
+                    service_names = [s["name"] for s in all_data["services"]]
+                    custom_types = service_names + all_data["dtos"] + ["NestResponse"]
                     dummy_headers = "".join(
                         [f"typedef int {t};\n" for t in custom_types]
                     )

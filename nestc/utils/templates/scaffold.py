@@ -1,7 +1,4 @@
-
-MAIN_TEMPLATE = """#include <stdio.h>
-#include <stdlib.h>
-#include "@nestcore/nest_core.h" 
+MAIN_TEMPLATE = """#include "@nestcore/nest_core.h" 
 #include "@nestcore/frozen.h" 
 
 int main() {
@@ -20,13 +17,7 @@ int main() {
 }
 """
 
-APP_SERVICE = """#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#ifndef NESTC_JSON
-#define NESTC_JSON(str) strdup(str)
-#endif
+APP_SERVICE = """#include "@nestcore/nest_core.h"
 
 // @Service: AppService
 typedef struct {
@@ -34,30 +25,29 @@ typedef struct {
 } AppService;
 
 char* app_hello_logic() {
-    return NESTC_JSON("{\\\"message\\\": \\\"Hola desde el motor OOP de Nest-C!\\\"}");
+    return NESTC_OBJ(
+        NC_STR("message", "Hola desde el motor OOP de Nest-C!"),
+        NC_INT("status", 200)
+    );
 }
 """
 
-APP_CONTROLLER = """#include <stdio.h>
-#include "app.service.c"
+APP_CONTROLLER = """#include "app.service.c"
 
 // @Controller: /
 // @Inject: AppService
-char* get_hello_handler(AppService* service) {
-    if (service != NULL) {
-        return service->get_hello();
-    }
-    return NESTC_JSON("{\\\"error\\\": \\\"Servicio no inyectado\\\"}");
+NestResponse get_hello_handler(AppService* service) {
+    if (!service) return NESTC_ERROR("{\\\"error\\\": \\\"Servicio no inyectado\\\"}");
+    return NESTC_OK_T(service->get_hello());
 }
 """
 
-APP_MODULE = """#include <stdio.h>
-#include <stdlib.h>
-#include "app.controller.c"
+APP_MODULE = """#include "app.controller.c"
 
 // @Init: AppService
 void* init_app_service() {
     AppService* s = malloc(sizeof(AppService));
+    if (!s) return NULL; // Protección OOM
     s->get_hello = app_hello_logic;
     return s;
 }

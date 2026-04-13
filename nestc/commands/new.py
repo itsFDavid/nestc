@@ -5,7 +5,7 @@ from nestc.utils.templates.scaffold import MAIN_TEMPLATE, APP_CONTROLLER, APP_MO
 from nestc.utils.downloader import ensure_dependencies
 
 def create_project_structure(project_name):
-    os.makedirs(os.path.join(project_name, "src", "utils"), exist_ok=True)
+    """Crea la estructura de carpetas y archivos base para un nuevo proyecto Nest-C."""
     src_app = os.path.join(project_name, "src", "app")
     folders = [project_name, os.path.join(project_name, "src"), src_app, os.path.join(project_name, "build")]
 
