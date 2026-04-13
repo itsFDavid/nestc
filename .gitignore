@@ -13,4 +13,11 @@ dist/
 **/*.pyo
 **/*.pyd
 **/*.so
+
+*.DS_Store
+*.log
+*.tmp
+*.bak
+*.swp
+
 mi-app/*

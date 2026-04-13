@@ -4,6 +4,7 @@ from nestc.commands.new import create_project_structure
 from nestc.commands.run import execute_run
 from nestc.commands.generate import create_resource
 from nestc.utils.fs import assert_nestc_project
+from nestc.commands.doctor import run_doctor
 
 @click.group()
 def main():
@@ -52,6 +53,11 @@ def generate_alias(ctx, type, name):
         ctx.invoke(resource, name=name)
     else:
         click.echo(f"Tipo desconocido: {type}")
+
+@main.command(name="doctor")
+def doctor():
+    """Verifica si el sistema tiene las dependencias necesarias."""
+    run_doctor()
 
 if __name__ == "__main__":
   main()

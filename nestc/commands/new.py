@@ -3,9 +3,15 @@ import click
 from nestc.utils.colors import Colors
 from nestc.utils.templates.scaffold import MAIN_TEMPLATE, APP_CONTROLLER, APP_MODULE, APP_SERVICE
 from nestc.utils.downloader import ensure_dependencies
+from nestc.commands.doctor import check_dependency
 
 def create_project_structure(project_name):
     """Crea la estructura de carpetas y archivos base para un nuevo proyecto Nest-C."""
+
+    if not check_dependency("gcc"):
+        click.echo(f"{Colors.RED} No se detectó GCC. Corre 'nestc doctor' antes de continuar.{Colors.END}")
+        return
+
     src_app = os.path.join(project_name, "src", "app")
     folders = [project_name, os.path.join(project_name, "src"), src_app, os.path.join(project_name, "build")]
 
