@@ -54,6 +54,11 @@ def generate_bootstrap_c(data, output_filename):
 
         f.write("  NestApp app = {3000, 1, 1};\n")
         f.write("  atexit(shutdown_framework);\n\n")
+
+        # 2. Manejo de Señales para Shutdown Limpio
+        f.write("  signal(SIGINT, handle_sigint);\n")
+        f.write("  signal(SIGTERM, handle_sigint);\n\n")
+
         f.write('  NC_LOG("NestFactory", "Starting Nest-C application...");\n\n')
 
         for s in data["services"]:

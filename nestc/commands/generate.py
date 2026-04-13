@@ -55,25 +55,32 @@ def create_resource(name):
 
         if crud:
             f.write(f'char* {name}_logic_all() {{\n')
-            f.write(f'    return NESTC_OBJ(NC_STR("res", "{name}"));\n}}\n\n')
+            f.write(f'    return NESTC_OBJ(NC_STR("res", "{name}"));\n')
+            f.write(f'}}\n\n')
             
             f.write(f'char* {name}_logic_one(const char* id) {{\n')
-            f.write(f'    return NESTC_OBJ(NC_STR("id", id));\n}}\n\n')
+            f.write(f'    return NESTC_OBJ(NC_STR("id", id));\n')
+            f.write(f'}}\n\n')
             
             f.write(f'char* {name}_logic_create(Create{cap}Dto* dto) {{\n')
-            f.write(f'    return Create{cap}Dto_to_json(dto);\n}}\n\n')
+            f.write(f'    // Retornamos el DTO serializado\n')
+            f.write(f'    return Create{cap}Dto_to_json(dto);\n')
+            f.write(f'}}\n\n')
             
             f.write(f'char* {name}_logic_update(const char* id, Update{cap}Dto* dto) {{\n')
-            f.write(f'    return Update{cap}Dto_to_json(dto);\n}}\n\n')
+            f.write(f'    return Update{cap}Dto_to_json(dto);\n')
+            f.write(f'}}\n\n')
             
             f.write(f'char* {name}_logic_remove(const char* id) {{\n')
             f.write(f'    return NESTC_OBJ(\n')
             f.write(f'        NC_STR("action", "removed"),\n')
             f.write(f'        NC_STR("id", id)\n')
-            f.write(f'    );\n}}\n')
+            f.write(f'    );\n')
+            f.write(f'}}\n')
         else:
             f.write(f'char* {name}_logic_something() {{\n')
-            f.write(f'    return NESTC_OBJ(NC_STR("action", "{name} service executed"));\n}}\n')
+            f.write(f'    return NESTC_OBJ(NC_STR("action", "{name} service executed"));\n')
+            f.write(f'}}\n')
 
     # 2. GENERAR CONTROLLER (NestResponse implementation)
     if not is_microservice:

@@ -46,6 +46,12 @@ static inline void nc_null(NcJson* j, const char* key) {
     j->len += snprintf(j->buf + j->len, NC_JSON_MAX_SIZE - j->len, "\\"%s\\":null", key);
 }
 
+static inline void nc_raw(NcJson* j, const char* key, const char* raw_json) {
+    if (!j->first_field) j->buf[j->len++] = ',';
+    j->first_field = 0;
+    j->len += snprintf(j->buf + j->len, NC_JSON_MAX_SIZE - j->len, "\\"%s\\":%s", key, raw_json);
+}
+
 static inline char* nc_build(NcJson* j) {
     if (j->len < NC_JSON_MAX_SIZE - 1) { j->buf[j->len++] = '}'; j->buf[j->len] = '\\0'; }
     return strdup(j->buf);
@@ -112,6 +118,13 @@ static inline int nc_get_int(const char* json, const char* key, int fallback) {
     json_scanf(json, strlen(json), fmt, &out);
     return out;
 }
+
+static inline int nc_get_bool(const char* json, const char* key, int fallback) {
+    int out = fallback; char fmt[64];
+    snprintf(fmt, sizeof(fmt), "{%s: %%B}", key);
+    json_scanf(json, strlen(json), fmt, &out);
+    return out;
+}
 #endif
 """
 
@@ -157,7 +170,6 @@ typedef struct {
 #define NESTC_CONFLICT(json)     ((NestResponse){409, strdup(json)})
 
 // --- Macros que TOMAN OWNERSHIP (para heap strings del service) ---
-// El puntero que entras es el que el router va a liberar. No hay copia.
 #define NESTC_OK_T(heap_json)      ((NestResponse){200, (heap_json)})
 #define NESTC_CREATED_T(heap_json) ((NestResponse){201, (heap_json)})
 #define NESTC_OK_CODE(code, heap_json) ((NestResponse){(code), (heap_json)})
@@ -221,5 +233,79 @@ static inline void load_env(const char *filename) {
     fclose(file);
 }
 
+#endif
+"""
+
+NC_VALIDATORS_CONTENT = """// @nestcore/nc_validators.h
+#ifndef NC_VALIDATORS_H
+#define NC_VALIDATORS_H
+
+#include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
+
+static inline int _nestc_validate_email(const char* s) {
+    if (!s || !*s) return 0;
+    const char* at = strchr(s, '@');
+    if (!at || at == s || strchr(at + 1, '@')) return 0;
+    const char* dot = strchr(at + 1, '.');
+    if (!dot || *(dot + 1) == '\\0') return 0; 
+    return 1;
+}
+
+static inline int _nestc_validate_url(const char* s) {
+    if (!s) return 0;
+    if (strncmp(s, "http://", 7) == 0 && strlen(s) > 7) return 1;
+    if (strncmp(s, "https://", 8) == 0 && strlen(s) > 8) return 1;
+    return 0;
+}
+
+static inline int _nestc_validate_uuid(const char* s) {
+    if (!s || strlen(s) != 36) return 0;
+    if (s[8] != '-' || s[13] != '-' || s[18] != '-' || s[23] != '-') return 0;
+    for (int i = 0; i < 36; i++) {
+        if (i == 8 || i == 13 || i == 18 || i == 23) continue;
+        if (!isxdigit((unsigned char)s[i])) return 0;
+    }
+    return 1;
+}
+
+// --- Date (YYYY-MM-DD) ---
+static inline int _nestc_validate_date(const char* s) {
+    if (!s || strlen(s) < 10) return 0; // Cambiado != 10 a < 10
+    if (s[4] != '-' || s[7] != '-') return 0;
+    for (int i = 0; i < 10; i++) {
+        if (i == 4 || i == 7) continue;
+        if (!isdigit((unsigned char)s[i])) return 0;
+    }
+    return 1;
+}
+
+// --- DateTime (ISO 8601: YYYY-MM-DDTHH:MM:SS) ---
+static inline int _nestc_validate_datetime(const char* s) {
+    if (!s || strlen(s) < 19) return 0;
+    if (!_nestc_validate_date(s)) return 0; 
+    if (s[10] != 'T') return 0;
+    for (int i = 11; i < 19; i++) {
+        if (i == 13 || i == 16) { if (s[i] != ':') return 0; continue; }
+        if (!isdigit((unsigned char)s[i])) return 0;
+    }
+    int h = atoi(s + 11);
+    int m = atoi(s + 14);
+    int sec = atoi(s + 17);
+    if (h > 23 || m > 59 || sec > 59) return 0;
+    return 1;
+}
+
+static inline int _nestc_validate_phone(const char* s) {
+    if (!s) return 0;
+    int digit_count = 0;
+    for (int i = 0; s[i]; i++) {
+        if (isdigit((unsigned char)s[i])) { digit_count++; continue; }
+        if (strchr("+- ()\\\\", s[i])) continue;
+        return 0;
+    }
+    return digit_count >= 7;
+}
 #endif
 """

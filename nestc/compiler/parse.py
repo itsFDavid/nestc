@@ -114,7 +114,7 @@ def analyze_project(src_dir):
 
                     # Inyectar los tipos falsos dinámicamente
                     service_names = [s["name"] for s in all_data["services"]]
-                    custom_types = service_names + all_data["dtos"] + ["NestResponse"]
+                    custom_types = service_names + all_data["dtos"] + ["NestResponse", "NcJson"]
                     dummy_headers = "".join(
                         [f"typedef int {t};\n" for t in custom_types]
                     )
