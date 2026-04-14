@@ -24,7 +24,13 @@
 
 **Nest-C** es un framework de backend escrito en Python (CLI) que genera y transpila código nativo en C. Adopta la arquitectura de NestJS — con Services, Controllers y Modules — implementada mediante **decoradores en comentarios** y un **motor de inyección de dependencias** que el compilador resuelve en tiempo de build.
 
+## Metricas y Rendimiento
+
 Sin runtime, sin intérprete. El output es un binario nativo que responde peticiones HTTP en microsegundos.
+
+En pruebas de estrés masivo (800 usuarios concurrentes), **Nest-C demostró procesar más de 1 millón de peticiones (CRUD completo) manteniendo una latencia máxima de 404ms**, superando abismalmente la resiliencia de frameworks basados en Node.js/V8.
+
+**[Lee el reporte de benchmark completo (Nest-C vs NestJS) aquí](./benchmarks/README.md)**
 
 ```bash
   Tu código C con decoradores

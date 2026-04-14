@@ -21,3 +21,12 @@ dist/
 *.swp
 
 mi-app/*
+
+**/build/
+**/dist/
+**/venv/
+**/__pycache__/
+**/*.pyc
+
+**/node_modules/
+**/bower_components/
